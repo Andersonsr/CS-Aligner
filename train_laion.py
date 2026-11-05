@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--save_every", default=2, type=int)
     parser.add_argument("--val_every", default=2, type=int)
+    parser.add_argument("--logit_scale_init", default=None, type=float, help="initial value for prior.logit_scale")
     parser.add_argument("--val_split", default="val2014", type=str, help="MSCOCO split to use for validation")
     parser.set_defaults(wandb_project="cs-aligner-laion", expname="cs-aligner-laion", fid_every=2)
     return parser.parse_args()
@@ -100,7 +101,7 @@ def main():
     os.makedirs(save_path, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    backbone = CSAlignerBackbone(device, load_decoder=not args.no_decoder)
+    backbone = CSAlignerBackbone(device, logit_scale_init=args.logit_scale_init, load_decoder=not args.no_decoder)
     model = CSAligner(args, backbone)
     datamodule = LaionDataModule(args, backbone.image_processor)
 
