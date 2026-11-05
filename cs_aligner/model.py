@@ -57,8 +57,9 @@ class CSAlignerBackbone(nn.Module):
             self.pipe = DiffusionPipeline.from_pretrained(KANDINSKY_DECODER, torch_dtype=torch.float16).to(device)
 
     # ------------------------------------------------------------------ losses
-    def alignment_cosine(self, image_proj, text_proj):
-        return losses.info_nce(image_proj, text_proj, self.prior.logit_scale.exp())
+    def alignment_cosine(self, image_proj, text_proj, all_image=None, all_text=None, rank=0):
+        return losses.info_nce(image_proj, text_proj, self.prior.logit_scale.exp(),
+                               all_image=all_image, all_text=all_text, rank=rank)
 
     def alignment_csdiv(self, image_proj, text_proj, sigma=1.0):
         return losses.cs_divergence(image_proj, text_proj, sigma=sigma)

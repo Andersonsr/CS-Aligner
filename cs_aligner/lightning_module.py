@@ -5,6 +5,7 @@ Training objective (on L2-normalised embeddings):
     loss = D_CS(img, text)                  # Cauchy-Schwarz divergence
          + aux_weight * InfoNCE(img, text)  # contrastive auxiliary loss
 """
+import math
 import os
 import random
 import tempfile
@@ -95,12 +96,22 @@ class CSAligner(pl.LightningModule):
             img_embs, _ = self.model_warp.image_encoder(images).to_tuple()
         return img_embs.detach(), text_embs, neg_embs
 
-    def _losses(self, img_proj, text_proj):
+    def _losses(self, img_proj, text_proj, gather=False):
+        # OpenCLIP-style: gather features from all ranks with gradients. InfoNCE uses
+        # local rows x global columns; CS divergence (log of global kernel means, not
+        # row-decomposable) uses the full global batch. In both cases the summed
+        # gradients across ranks, averaged by DDP, equal the global-batch gradient.
+        all_img, all_txt, rank = img_proj, text_proj, 0
+        if gather and self.trainer.world_size > 1:
+            all_img = self.all_gather(img_proj, sync_grads=True).flatten(0, 1)
+            all_txt = self.all_gather(text_proj, sync_grads=True).flatten(0, 1)
+            rank = self.global_rank
+
         if self.args.alignment_type == "csdiv":
-            align = self.model_warp.alignment_csdiv(img_proj, text_proj, sigma=self.args.csdiv_sigma)
-            aux = self.model_warp.alignment_cosine(img_proj, text_proj)
+            align = self.model_warp.alignment_csdiv(all_img, all_txt, sigma=self.args.csdiv_sigma)
+            aux = self.model_warp.alignment_cosine(img_proj, text_proj, all_img, all_txt, rank)
         else:  # InfoNCE-only baseline
-            align = self.model_warp.alignment_cosine(img_proj, text_proj)
+            align = self.model_warp.alignment_cosine(img_proj, text_proj, all_img, all_txt, rank)
             aux = torch.zeros((), device=img_proj.device)
         return align, aux
 
@@ -110,7 +121,7 @@ class CSAligner(pl.LightningModule):
 
         img_proj = F.normalize(img_embs, dim=-1)
         text_proj = F.normalize(text_embs, dim=-1)
-        align, aux = self._losses(img_proj, text_proj)
+        align, aux = self._losses(img_proj, text_proj, gather=True)
         loss = align + self.args.aux_weight * aux
 
         if batch_idx % self.args.log_every == 0:
@@ -121,6 +132,11 @@ class CSAligner(pl.LightningModule):
                 print(f"[train] epoch={self.current_epoch} step={batch_idx} loss={loss.item():.4f} "
                       f"align={align.item():.4f} aux={float(aux):.4f} logit_scale={logit_scale.item():.2f}")
         return loss
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        # OpenCLIP-style: keep the temperature in [1, 100] after each optimizer step
+        with torch.no_grad():
+            self.model_warp.prior.logit_scale.clamp_(0, math.log(100))
 
     def validation_step(self, batch, batch_idx):
         images, captions = batch

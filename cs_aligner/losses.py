@@ -36,9 +36,16 @@ def cs_divergence(x1, x2, sigma=1.0):
     return -2 * torch.log(cross_term) + torch.log(self_term1) + torch.log(self_term2)
 
 
-def info_nce(image_proj, text_proj, logit_scale):
-    """Symmetric contrastive (CLIP) loss on L2-normalised embeddings."""
-    logits_per_image = logit_scale * image_proj @ text_proj.t()
-    logits_per_text = logits_per_image.t()
-    labels = torch.arange(len(logits_per_image), device=image_proj.device)
+def info_nce(image_proj, text_proj, logit_scale, all_image=None, all_text=None, rank=0):
+    """Symmetric contrastive (CLIP) loss on L2-normalised embeddings.
+
+    OpenCLIP-style distributed variant: rows are the local samples, columns are
+    the features gathered from all ranks (``all_image`` / ``all_text``); the
+    positive of local sample ``i`` sits at column ``rank * B + i``.
+    """
+    all_image = image_proj if all_image is None else all_image
+    all_text = text_proj if all_text is None else all_text
+    logits_per_image = logit_scale * image_proj @ all_text.t()
+    logits_per_text = logit_scale * text_proj @ all_image.t()
+    labels = torch.arange(len(image_proj), device=image_proj.device) + rank * len(image_proj)
     return (F.cross_entropy(logits_per_image, labels) + F.cross_entropy(logits_per_text, labels)) / 2
