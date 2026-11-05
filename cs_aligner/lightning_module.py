@@ -54,6 +54,8 @@ def add_common_args(parser):
     parser.add_argument("--fid_batches", default=15, type=int, help="number of decode batches used for FID")
     parser.add_argument("--decode_batch_size", default=32, type=int)
     parser.add_argument("--log_every", default=50, type=int)
+    parser.add_argument("--no_decoder", action="store_true",
+                        help="do not load the Kandinsky decoder: no sample grid and no FID during validation")
     return parser
 
 
@@ -154,14 +156,15 @@ class CSAligner(pl.LightningModule):
         self._val_img, self._val_txt, self._val_neg = [], [], []
 
         # 1) sample grid: top row = from predicted (text->image) embeddings, bottom row = from GT image embeddings
-        to_tensor = transforms.ToTensor()
-        pred = self.model_warp.decode(txt_feats[-4:], neg_feats[-4:])
-        gt = self.model_warp.decode(img_feats[-4:])
-        grid = make_grid(torch.stack([to_tensor(im) for im in pred + gt]), nrow=4)
-        self._log_wandb({"samples": grid})
+        if not self.args.no_decoder:
+            to_tensor = transforms.ToTensor()
+            pred = self.model_warp.decode(txt_feats[-4:], neg_feats[-4:])
+            gt = self.model_warp.decode(img_feats[-4:])
+            grid = make_grid(torch.stack([to_tensor(im) for im in pred + gt]), nrow=4)
+            self._log_wandb({"samples": grid})
 
         # 2) FID of images decoded from predicted embeddings vs. MSCOCO val statistics
-        if (self.current_epoch + 1) % self.args.fid_every == 0:
+        if not self.args.no_decoder and (self.current_epoch + 1) % self.args.fid_every == 0:
             bs = self.args.decode_batch_size
             with tempfile.TemporaryDirectory() as tmp:
                 idx = 0

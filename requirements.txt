@@ -1,0 +1,16 @@
+# versions of the original runs (README: the dalle2 env)
+torch==2.3.1
+torchvision==0.18.1
+pytorch-lightning==2.1.0
+diffusers==0.20.2
+transformers==4.46.0
+# diffusers 0.20 imports cached_download, removed in huggingface_hub 0.26; transformers 4.46 needs >= 0.23.2
+huggingface_hub>=0.23.2,<0.26
+webdataset
+numpy<2
+scipy
+scikit-learn
+matplotlib
+Pillow
+tqdm
+wandb

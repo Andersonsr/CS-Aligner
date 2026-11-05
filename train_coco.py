@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--save_every", default=10, type=int)
     parser.add_argument("--val_every", default=5, type=int)
+    parser.add_argument("--logit_scale_init", default=None, type=float, help="initial value for prior.logit_scale")
     parser.set_defaults(wandb_project="cs-aligner-coco", expname="cs-aligner-coco")
     return parser.parse_args()
 
@@ -45,7 +46,7 @@ def main():
     os.makedirs(save_path, exist_ok=True)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    backbone = CSAlignerBackbone(device)
+    backbone = CSAlignerBackbone(device, logit_scale_init=args.logit_scale_init, load_decoder=not args.no_decoder)
     collate = make_collate(backbone.image_processor)
 
     flip = transforms.RandomHorizontalFlip()

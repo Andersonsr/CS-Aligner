@@ -20,7 +20,7 @@ KANDINSKY_DECODER = "kandinsky-community/kandinsky-2-2-decoder"
 
 
 class CSAlignerBackbone(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, logit_scale_init=None, load_decoder=True):
         super().__init__()
         self.text_encoder = (
             CLIPTextModelWithProjection.from_pretrained(
@@ -35,7 +35,10 @@ class CSAlignerBackbone(nn.Module):
 
         # Trainable prior, initialised from the ECLIPSE config (random weights).
         self.prior = PriorTransformer(**PriorTransformer.load_config(PRIOR_CONFIG))
-        self.prior.logit_scale = nn.Parameter(torch.tensor(2.6592))  # log(1/0.07)
+        if logit_scale_init is not None:
+            self.prior.logit_scale = nn.Parameter(torch.tensor(logit_scale_init))
+        else:
+            self.prior.logit_scale = nn.Parameter(torch.tensor(2.6592))  # log(1/0.07)
         self.prior.requires_grad_(True)
 
         self.pipe_prior = KandinskyPriorPipeline.from_pretrained(
@@ -48,7 +51,10 @@ class CSAlignerBackbone(nn.Module):
         self.pipe_prior.image_encoder = self.pipe_prior.image_encoder.eval().requires_grad_(False).to(device)
         self.image_encoder = self.pipe_prior.image_encoder
 
-        self.pipe = DiffusionPipeline.from_pretrained(KANDINSKY_DECODER, torch_dtype=torch.float16).to(device)
+        # only needed to decode images (validation samples, FID, sample_t2i.py), not for training
+        self.pipe = None
+        if load_decoder:
+            self.pipe = DiffusionPipeline.from_pretrained(KANDINSKY_DECODER, torch_dtype=torch.float16).to(device)
 
     # ------------------------------------------------------------------ losses
     def alignment_cosine(self, image_proj, text_proj):
