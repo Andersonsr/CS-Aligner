@@ -17,7 +17,7 @@
 #SBATCH --ntasks-per-node=4          # one task per GPU (must equal --gres=gpu:N)
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=8           # dataloader workers
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=24:00:00
 #SBATCH --account=tornado
 #SBATCH --output=logs/%x-%j.out

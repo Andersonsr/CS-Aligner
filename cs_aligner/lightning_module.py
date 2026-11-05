@@ -5,7 +5,6 @@ Training objective (on L2-normalised embeddings):
     loss = D_CS(img, text)                  # Cauchy-Schwarz divergence
          + aux_weight * InfoNCE(img, text)  # contrastive auxiliary loss
 """
-import math
 import os
 import random
 import tempfile
@@ -132,11 +131,6 @@ class CSAligner(pl.LightningModule):
                 print(f"[train] epoch={self.current_epoch} step={batch_idx} loss={loss.item():.4f} "
                       f"align={align.item():.4f} aux={float(aux):.4f} logit_scale={logit_scale.item():.2f}")
         return loss
-
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        # OpenCLIP-style: keep the temperature in [1, 100] after each optimizer step
-        with torch.no_grad():
-            self.model_warp.prior.logit_scale.clamp_(0, math.log(100))
 
     def validation_step(self, batch, batch_idx):
         images, captions = batch
