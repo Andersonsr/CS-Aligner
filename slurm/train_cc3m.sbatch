@@ -14,15 +14,21 @@
 # Lightning reads the ranks from slurm: one task per GPU, so --ntasks-per-node must equal the gpus of --gres.
 #SBATCH --job-name=cs-aligner-cc3m
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1          # one task per GPU (must equal --gres=gpu:N)
-#SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=16           # dataloader workers
-#SBATCH --mem=128G
+#SBATCH --ntasks-per-node=4          # one task per GPU (must equal --gres=gpu:N)
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=8           # dataloader workers
+#SBATCH --mem=64G
 #SBATCH --time=24:00:00
 #SBATCH --account=tornado
-#SBATCH --output=logs/cs-aligner-%x-%j.out
-##SBATCH --partition=tc
-
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --partition=tc
+ 
+# ESTIMATED CALIBRATED TEMPERATURES (T_2):
+#   1. Softmax Formulation (Eq. 8):         T_2 = 37.4113
+#   2. Normalized Log-Softmax (eta2=eta1):  T_2 = 32.1144
+#   3. Absolute Log-Softmax (Loss match):   T_2 = 11.4783
+#   4. Closed-Form Quadratic Approximation: T_2 = 12.2765
+ 
 set -eo pipefail
 . ~/.bashrc
 conda activate "${CONDA_ENV:-dalle2}"
@@ -31,8 +37,10 @@ export HTTP_PROXY=http://$USER:$PASSWORD@${PROXY_HOST:?set PROXY_HOST in the con
 export HTTPS_PROXY=$HTTP_PROXY
 export TOKENIZERS_PARALLELISM=false
 export PYTHONUNBUFFERED=1
+export NCCL_DEBUG=WARN
+export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 set -u
-
+ 
 DATA=${CLUSTER_HOME:?set CLUSTER_HOME in the conda env}/data/dataset
 CC3M_ROOT=${CC3M_ROOT:-$DATA/cc3m}
 COCO_ROOT=${COCO_ROOT:-$DATA/coco}
@@ -43,7 +51,7 @@ CPUS=${SLURM_CPUS_PER_TASK:-16}
 # CC3M has ~2.9M training samples: one epoch is that many samples over all GPUs (the shards are resampled and
 # --samples_per_epoch counts per process)
 SAMPLES_PER_EPOCH=$((2900000 / GPUS))
-
+ 
 # brace pattern over the shards (webdataset expands it): cc3m-train-{0000..0575}.tar for the 576 hf shards
 NUM_SHARDS=$(find "$CC3M_ROOT" -maxdepth 1 -name 'cc3m-train-*.tar' | wc -l)
 if [ "$NUM_SHARDS" -eq 0 ]; then
@@ -51,18 +59,21 @@ if [ "$NUM_SHARDS" -eq 0 ]; then
     exit 1
 fi
 SHARDS="$CC3M_ROOT/cc3m-train-{0000..$(printf %04d $((NUM_SHARDS - 1)))}.tar"
-
+ 
 mkdir -p logs
 echo "$(date) job $SLURM_JOB_ID exp=$EXPNAME shards=$SHARDS coco=$COCO_ROOT fid=$FID_STAT gpus=$GPUS" \
     "samples/epoch/gpu=$SAMPLES_PER_EPOCH"
-
+ 
 # the stats are only read by FID, which needs the decoder
 if [[ " $* " != *" --no_decoder "* ]] && [ ! -f "$FID_STAT" ]; then
     echo "$(date) $FID_STAT missing, building it"
     python make_fid_stats.py --coco_root "$COCO_ROOT" --split val2017 --out "$FID_STAT" --num_workers "$CPUS"
 fi
-
+ 
 srun python train_laion.py --devices "$GPUS" --num_workers "$CPUS" --expname "$EXPNAME" \
     --laion_shards "$SHARDS" --samples_per_epoch "$SAMPLES_PER_EPOCH" \
     --coco_root "$COCO_ROOT" --val_split val2017 --fid_stat "$FID_STAT" \
-    --batch_size 256 --lr 0.00005 --aux_weight 0.01 --wandb_project cs-aligner-cc3m --logit_scale "$@"
+    --batch_size 256 --lr 0.00005 --aux_weight 0.01 --wandb_project cs-aligner-cc3m \
+    --logit_scale_init 4.6052 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ "$@"
+ 
+ 

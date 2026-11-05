@@ -114,11 +114,12 @@ class CSAligner(pl.LightningModule):
         loss = align + self.args.aux_weight * aux
 
         if batch_idx % self.args.log_every == 0:
+            logit_scale = self.model_warp.prior.logit_scale.detach().exp()
             self.log_dict({"train/train_loss": loss, "train/align_loss": align,
-                           "train/aux_loss": aux})
+                           "train/aux_loss": aux, "train/logit_scale": logit_scale})
             if self.trainer.is_global_zero:
                 print(f"[train] epoch={self.current_epoch} step={batch_idx} loss={loss.item():.4f} "
-                      f"align={align.item():.4f} aux={float(aux):.4f}")
+                      f"align={align.item():.4f} aux={float(aux):.4f} logit_scale={logit_scale.item():.2f}")
         return loss
 
     def validation_step(self, batch, batch_idx):

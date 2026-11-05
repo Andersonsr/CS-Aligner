@@ -100,7 +100,11 @@ def main():
     save_path = os.path.join(args.save_dir, args.expname)
     os.makedirs(save_path, exist_ok=True)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # one process per GPU (srun sets SLURM_LOCALID): build the backbone on this rank's GPU, not all on cuda:0
+    device = "cpu"
+    if torch.cuda.is_available():
+        device = f"cuda:{int(os.environ.get('LOCAL_RANK', os.environ.get('SLURM_LOCALID', 0)))}"
+        torch.cuda.set_device(device)
     backbone = CSAlignerBackbone(device, logit_scale_init=args.logit_scale_init, load_decoder=not args.no_decoder)
     model = CSAligner(args, backbone)
     datamodule = LaionDataModule(args, backbone.image_processor)
