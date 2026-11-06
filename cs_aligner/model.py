@@ -4,6 +4,8 @@ Only ``self.prior`` (the ECLIPSE PriorTransformer, plus its ``logit_scale``) is
 trained.  The CLIP ViT-bigG text / image encoders and the Kandinsky 2.2 decoder
 stay frozen and are only used to produce targets and to decode images.
 """
+import math
+
 import torch
 import torch.nn as nn
 from diffusers import DiffusionPipeline
@@ -35,10 +37,10 @@ class CSAlignerBackbone(nn.Module):
 
         # Trainable prior, initialised from the ECLIPSE config (random weights).
         self.prior = PriorTransformer(**PriorTransformer.load_config(PRIOR_CONFIG))
-        if logit_scale_init is not None:
-            self.prior.logit_scale = nn.Parameter(torch.tensor(logit_scale_init))
-        else:
-            self.prior.logit_scale = nn.Parameter(torch.tensor(2.6592))  # log(1/0.07)
+        # logit_scale_init is the actual scale (e.g. 100); the parameter is stored in log space
+        if logit_scale_init is None:
+            logit_scale_init = 1 / 0.07
+        self.prior.logit_scale = nn.Parameter(torch.tensor(math.log(logit_scale_init)))
         self.prior.requires_grad_(True)
 
         self.pipe_prior = KandinskyPriorPipeline.from_pretrained(

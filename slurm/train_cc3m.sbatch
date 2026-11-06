@@ -18,16 +18,19 @@
 #SBATCH --gres=gpu:4
 #SBATCH --cpus-per-task=8           # dataloader workers
 #SBATCH --mem=128G
-#SBATCH --time=24:00:00
+#SBATCH --time=25:00:00
 #SBATCH --account=tornado
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --partition=tc
  
+ 
 # ESTIMATED CALIBRATED TEMPERATURES (T_2):
-#   1. Softmax Formulation (Eq. 8):         T_2 = 37.4113
-#   2. Normalized Log-Softmax (eta2=eta1):  T_2 = 32.1144
-#   3. Absolute Log-Softmax (Loss match):   T_2 = 11.4783
-#   4. Closed-Form Quadratic Approximation: T_2 = 12.2765
+#   1. Softmax Formulation (Eq. 8):         T_2 = 44.4290
+#   2. Normalized Log-Softmax (eta2=eta1):  T_2 = 36.6026
+#   3. Absolute Log-Softmax (Loss match):   T_2 = 17.8430
+#   4. Closed-Form Quadratic Approximation: T_2 = 18.7018
+ 
+ 
  
 set -eo pipefail
 . ~/.bashrc
@@ -74,6 +77,6 @@ srun python train_laion.py --devices "$GPUS" --num_workers "$CPUS" --expname "$E
     --laion_shards "$SHARDS" --samples_per_epoch "$SAMPLES_PER_EPOCH" \
     --coco_root "$COCO_ROOT" --val_split val2017 --fid_stat "$FID_STAT" \
     --batch_size 256 --lr 0.00005 --aux_weight 0.01 --wandb_project cs-aligner-cc3m \
-    --logit_scale_init 4.6052 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ "$@"
+    --logit_scale_init 100 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ "$@"
  
  

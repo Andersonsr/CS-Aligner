@@ -5,6 +5,7 @@ Training objective (on L2-normalised embeddings):
     loss = D_CS(img, text)                  # Cauchy-Schwarz divergence
          + aux_weight * InfoNCE(img, text)  # contrastive auxiliary loss
 """
+import math
 import os
 import random
 import tempfile
@@ -46,6 +47,13 @@ def add_common_args(parser):
     parser.add_argument("--csdiv_sigma", default=1.0, type=float, help="Gaussian kernel width of D_CS")
     parser.add_argument("--negative_prompt", default="", type=str,
                         help='negative prompt for the prior, e.g. "low quality, bad quality"; empty = none')
+    parser.add_argument("--logit_scale_schedule", action="store_true",
+                        help="cosine-schedule the logit scale from --logit_scale_init to --logit_scale_final "
+                             "instead of learning it")
+    parser.add_argument("--logit_scale_final", default=None, type=float,
+                        help="final logit scale (actual value) of the cosine schedule")
+    parser.add_argument("--logit_scale_schedule_frac", default=0.75, type=float,
+                        help="fraction of the total training steps over which the logit scale reaches its final value")
 
     # evaluation during training
     parser.add_argument("--fid_stat", type=str,
@@ -73,6 +81,12 @@ class CSAligner(pl.LightningModule):
         self.model_warp = backbone  # attribute name kept for checkpoint compatibility
         self.max_val_samples = max_val_samples
         self._val_img, self._val_txt, self._val_neg = [], [], []
+
+        if args.logit_scale_schedule:
+            if args.logit_scale_final is None:
+                raise ValueError("--logit_scale_schedule requires --logit_scale_final")
+            # the scale is set by the schedule, not learned
+            self.model_warp.prior.logit_scale.requires_grad_(False)
 
     # Only the prior is saved / restored (keys: "model.prior.*").
     def state_dict(self, *args, **kwargs):
@@ -113,6 +127,23 @@ class CSAligner(pl.LightningModule):
             align = self.model_warp.alignment_cosine(img_proj, text_proj, all_img, all_txt, rank)
             aux = torch.zeros((), device=img_proj.device)
         return align, aux
+
+    def on_train_start(self):
+        if self.args.logit_scale_schedule:
+            total = self.trainer.estimated_stepping_batches
+            if math.isinf(total):  # WebDataset loader has no length: use its fixed epoch size (train_laion.py)
+                total = self.trainer.max_epochs * (self.args.samples_per_epoch // self.args.batch_size)
+            self._logit_scale_steps = max(1, int(self.args.logit_scale_schedule_frac * total))
+
+    def on_train_batch_start(self, batch, batch_idx):
+        # cosine from the initial to the final scale over _logit_scale_steps, then constant
+        if self.args.logit_scale_schedule:
+            start = self.args.logit_scale_init if self.args.logit_scale_init is not None else 1 / 0.07
+            end = self.args.logit_scale_final
+            t = min(self.global_step / self._logit_scale_steps, 1.0)
+            scale = end + 0.5 * (start - end) * (1 + math.cos(math.pi * t))
+            with torch.no_grad():
+                self.model_warp.prior.logit_scale.fill_(math.log(scale))
 
     def training_step(self, batch, batch_idx):
         images, captions = batch

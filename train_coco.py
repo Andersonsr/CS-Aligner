@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--save_every", default=10, type=int)
     parser.add_argument("--val_every", default=5, type=int)
-    parser.add_argument("--logit_scale_init", default=None, type=float, help="initial value for prior.logit_scale")
+    parser.add_argument("--logit_scale_init", default=None, type=float, help="initial logit scale (actual value, e.g. 100); stored as log in prior.logit_scale")
     parser.set_defaults(wandb_project="cs-aligner-coco", expname="cs-aligner-coco")
     return parser.parse_args()
 
