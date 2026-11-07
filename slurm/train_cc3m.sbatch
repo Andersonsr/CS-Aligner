@@ -73,10 +73,11 @@ if [[ " $* " != *" --no_decoder "* ]] && [ ! -f "$FID_STAT" ]; then
     python make_fid_stats.py --coco_root "$COCO_ROOT" --split val2017 --out "$FID_STAT" --num_workers "$CPUS"
 fi
  
+ 
 srun python train_laion.py --devices "$GPUS" --num_workers "$CPUS" --expname "$EXPNAME" \
     --laion_shards "$SHARDS" --samples_per_epoch "$SAMPLES_PER_EPOCH" \
     --coco_root "$COCO_ROOT" --val_split val2017 --fid_stat "$FID_STAT" \
     --batch_size 256 --lr 0.00005 --aux_weight 0.01 --wandb_project cs-aligner-cc3m \
-    --logit_scale_init 100 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ "$@"
- 
+    --logit_scale_init 100 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ \
+    --logit_scale_schedule --logit_scale_final 44.429 --logit_scale_schedule_frac 0.70 --epochs 19 "$@"
  

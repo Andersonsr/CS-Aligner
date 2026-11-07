@@ -131,7 +131,9 @@ class CSAligner(pl.LightningModule):
     def on_train_start(self):
         if self.args.logit_scale_schedule:
             total = self.trainer.estimated_stepping_batches
-            if math.isinf(total):  # WebDataset loader has no length: use its fixed epoch size (train_laion.py)
+            # WebDataset loader has no length, so Lightning returns max_steps (-1 when unset) or inf:
+            # use its fixed epoch size instead (train_laion.py)
+            if math.isinf(total) or total <= 0:
                 total = self.trainer.max_epochs * (self.args.samples_per_epoch // self.args.batch_size)
             self._logit_scale_steps = max(1, int(self.args.logit_scale_schedule_frac * total))
 
