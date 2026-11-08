@@ -79,5 +79,5 @@ srun python train_laion.py --devices "$GPUS" --num_workers "$CPUS" --expname "$E
     --coco_root "$COCO_ROOT" --val_split val2017 --fid_stat "$FID_STAT" \
     --batch_size 256 --lr 0.00005 --aux_weight 0.01 --wandb_project cs-aligner-cc3m \
     --logit_scale_init 100 --save_dir /nethome/recpinfo/users/fibz/data/checkpoint/cs-aligner/ \
-    --logit_scale_schedule --logit_scale_final 44.429 --logit_scale_schedule_frac 0.70 --epochs 19 "$@"
+    --logit_scale_schedule --logit_scale_final 44.429 --logit_scale_schedule_frac 0.70 --epochs 19 --val_every 1 "$@"
  

@@ -2,11 +2,14 @@
 
 The images go through the frozen CLIP ViT-bigG image encoder, the prompt "a photo of <class name>" of each class
 through either
-  - the trained prior (text -> predicted image embedding): run --name (default "CS-Aligner"), with --ckpt
+  - the trained prior (text -> predicted image embedding), for each checkpoint of --ckpt: run --name (default
+    "CS-Aligner") with one checkpoint, "<experiment folder>/<checkpoint name>" with several
   - the CLIP ViT-bigG text encoder alone: run "CLIP ViT-bigG", the reference the prior is compared with
 and an image gets the class of highest cosine similarity. The results are written as
 {dataset: {run: {acc1, acc5, mean_per_class_recall}}}, the layout of clip-refine's merged results:
     python eval_zeroshot.py --data_root /path/to/datasets --ckpt save/<exp>/<checkpoint>.ckpt
+    python eval_zeroshot.py --data_root /path/to/datasets --ckpt save/<exp>/*.ckpt save/<exp2>/*.ckpt
+The images are encoded once per dataset and shared by all the checkpoints.
 data_root is the folder given to vlm-tuning's download_datasets.sh --data (see cs_aligner/zeroshot_datasets.py).
 """
 import argparse
@@ -20,7 +23,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cs_aligner.model import CSAlignerBackbone, load_prior_checkpoint
-from cs_aligner.zeroshot_datasets import DATASETS, load_dataset, read_classnames
+from cs_aligner.zeroshot_datasets import DATASETS, classname_path, load_dataset, read_classnames
 
 CLIP_RUN = "CLIP ViT-bigG"
 
@@ -28,10 +31,13 @@ CLIP_RUN = "CLIP ViT-bigG"
 def parse_args():
     parser = argparse.ArgumentParser(description="CS-Aligner zero-shot classification")
     parser.add_argument("--data_root", required=True, type=str, help="folder given to download_datasets.sh --data")
-    parser.add_argument("--ckpt", default=None, type=str, help="CS-Aligner checkpoint; without it only CLIP is run")
-    parser.add_argument("--name", default="CS-Aligner", type=str, help="run name of the prior in the results")
+    parser.add_argument("--ckpt", nargs="*", default=[], type=str,
+                        help="CS-Aligner checkpoint(s); without any only CLIP is run")
+    parser.add_argument("--name", default="CS-Aligner", type=str,
+                        help="run name of the prior in the results, when a single checkpoint is given")
     parser.add_argument("--out", default=None, type=str,
-                        help="results json (default <ckpt without .ckpt>_zeroshot.json, zeroshot_clip.json without --ckpt)")
+                        help="results json (default <ckpt without .ckpt>_zeroshot.json with one checkpoint, "
+                             "zeroshot.json next to the first checkpoint with several, zeroshot_clip.json without any)")
     parser.add_argument("--datasets", nargs="+", choices=list(DATASETS), default=list(DATASETS))
     parser.add_argument("--class_prompt", default="a photo of", type=str)
     parser.add_argument("--batch_size", default=256, type=int)
@@ -93,32 +99,48 @@ def classification_metrics(logits, target):
     return {"acc1": acc1, "acc5": acc5, "mean_per_class_recall": balanced_accuracy_score(target, pred)}
 
 
+def run_name(ckpt):
+    # save/<exp>/<checkpoint>.ckpt -> <exp>/<checkpoint>
+    return f"{os.path.basename(os.path.dirname(os.path.abspath(ckpt)))}/{os.path.splitext(os.path.basename(ckpt))[0]}"
+
+
 def main():
     args = parse_args()
-    out = args.out or (os.path.splitext(args.ckpt)[0] + "_zeroshot.json" if args.ckpt else "zeroshot_clip.json")
+    if len(args.ckpt) == 1:
+        runs = {args.name: args.ckpt[0]}
+        out = args.out or os.path.splitext(args.ckpt[0])[0] + "_zeroshot.json"
+    else:
+        runs = {run_name(c): c for c in args.ckpt}
+        if len(runs) != len(args.ckpt):
+            raise ValueError("two checkpoints share the same <experiment folder>/<checkpoint name>")
+        out = args.out or (os.path.join(os.path.dirname(args.ckpt[0]), "zeroshot.json") if runs
+                           else "zeroshot_clip.json")
     device = "cuda"
     torch.manual_seed(args.seed)
 
     model = CSAlignerBackbone(device, load_decoder=False)
-    if args.ckpt:
-        load_prior_checkpoint(model, args.ckpt, strict=True, map_location=device)
     model.eval()
     preprocess = Preprocess(model.image_processor)
+
+    # text classifiers first, so each checkpoint is loaded once
+    prompts = {name: [f"{args.class_prompt} {c}"
+                      for c in read_classnames(classname_path(DATASETS[name][0].classname_file))]
+               for name in args.datasets}
+    classifiers = {name: {CLIP_RUN: clip_text_features(model, p, device, args.batch_size)} for name, p in prompts.items()}
+    for run, ckpt in runs.items():
+        print(f"## loading {ckpt} as {run}")
+        load_prior_checkpoint(model, ckpt, strict=True, map_location=device)
+        for name, p in prompts.items():
+            classifiers[name][run] = prior_text_features(model, p, device, args.batch_size, args.seed)
 
     results = {}
     for name in args.datasets:
         print(f"## {name}")
-        dataset, classname_file = load_dataset(name, args.data_root, preprocess)
+        dataset, _ = load_dataset(name, args.data_root, preprocess)
         loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                             pin_memory=True)
         images, target = image_features(model, loader, device)
-
-        prompts = [f"{args.class_prompt} {c}" for c in read_classnames(classname_file)]
-        classifiers = {CLIP_RUN: clip_text_features(model, prompts, device, args.batch_size)}
-        if args.ckpt:
-            classifiers[args.name] = prior_text_features(model, prompts, device, args.batch_size, args.seed)
-
-        results[name] = {run: classification_metrics(images @ text.T, target) for run, text in classifiers.items()}
+        results[name] = {run: classification_metrics(images @ text.T, target) for run, text in classifiers[name].items()}
         print(f"## {name}: {results[name]}")
         with open(out, "w") as f:  # after every dataset, so a job cut short keeps what it finished
             json.dump(results, f, indent=2)

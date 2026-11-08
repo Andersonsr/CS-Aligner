@@ -2,7 +2,10 @@
 # Zero-shot classification (eval_zeroshot.py) on the test sets of clip-refine, with the trained prior and with plain
 # CLIP ViT-bigG for reference. Submit from the CS-Aligner root:
 #   sbatch slurm/eval_zeroshot.sbatch --ckpt save/<exp>/<checkpoint>.ckpt
+#   sbatch slurm/eval_zeroshot.sbatch --ckpt save/<exp>/*.ckpt save/<exp2>/*.ckpt   # several trained models
 #   sbatch slurm/eval_zeroshot.sbatch                   # CLIP ViT-bigG only
+# With several checkpoints the images are encoded once, each checkpoint is a run "<exp>/<checkpoint name>", and all
+# of them go to one zeroshot.json next to the first checkpoint (or --out).
 #   sbatch slurm/eval_zeroshot.sbatch --ckpt ... --datasets zeroshot_classification_imagenet
 # DATA_ROOT (default $CLUSTER_HOME/data/dataset, the datasets home) is the folder given to vlm-tuning's
 # download_datasets.sh --data. CONDA_ENV (default dalle2) is the env activated; CLUSTER_HOME and PROXY_HOST must be set
