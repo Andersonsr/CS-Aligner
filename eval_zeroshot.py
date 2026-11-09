@@ -104,17 +104,20 @@ def run_name(ckpt):
     return f"{os.path.basename(os.path.dirname(os.path.abspath(ckpt)))}/{os.path.splitext(os.path.basename(ckpt))[0]}"
 
 
+def runs_and_out(ckpts, name, out, kind):
+    """{run name: checkpoint} and the results path: <ckpt>_<kind>.json with one checkpoint (run `name`),
+    <kind>.json next to the first checkpoint with several, <kind>_clip.json without any; `out` overrides the path."""
+    if len(ckpts) == 1:
+        return {name: ckpts[0]}, out or os.path.splitext(ckpts[0])[0] + f"_{kind}.json"
+    runs = {run_name(c): c for c in ckpts}
+    if len(runs) != len(ckpts):
+        raise ValueError("two checkpoints share the same <experiment folder>/<checkpoint name>")
+    return runs, out or (os.path.join(os.path.dirname(ckpts[0]), f"{kind}.json") if runs else f"{kind}_clip.json")
+
+
 def main():
     args = parse_args()
-    if len(args.ckpt) == 1:
-        runs = {args.name: args.ckpt[0]}
-        out = args.out or os.path.splitext(args.ckpt[0])[0] + "_zeroshot.json"
-    else:
-        runs = {run_name(c): c for c in args.ckpt}
-        if len(runs) != len(args.ckpt):
-            raise ValueError("two checkpoints share the same <experiment folder>/<checkpoint name>")
-        out = args.out or (os.path.join(os.path.dirname(args.ckpt[0]), "zeroshot.json") if runs
-                           else "zeroshot_clip.json")
+    runs, out = runs_and_out(args.ckpt, args.name, args.out, "zeroshot")
     device = "cuda"
     torch.manual_seed(args.seed)
 

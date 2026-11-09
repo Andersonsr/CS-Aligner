@@ -1,0 +1,189 @@
+{
+  "zeroshot_classification_aircraft": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.541854202747345,
+      "acc5": 0.9495949745178223,
+      "mean_per_class_recall": 0.5416042780748663
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.2928292751312256,
+      "acc5": 0.7095709443092346,
+      "mean_per_class_recall": 0.29303921568627445
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.3222322165966034,
+      "acc5": 0.720672070980072,
+      "mean_per_class_recall": 0.3216577540106952
+    }
+  },
+  "zeroshot_classification_car": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.9486382007598877,
+      "acc5": 0.9990050792694092,
+      "mean_per_class_recall": 0.9487151326798174
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.6843675971031189,
+      "acc5": 0.9441611766815186,
+      "mean_per_class_recall": 0.6862957530956678
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.690585732460022,
+      "acc5": 0.9431662559509277,
+      "mean_per_class_recall": 0.692293938561382
+    }
+  },
+  "zeroshot_classification_caltech101": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.8953346610069275,
+      "acc5": 0.9626774787902832,
+      "mean_per_class_recall": 0.9434199687188688
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.8044624924659729,
+      "acc5": 0.9448275566101074,
+      "mean_per_class_recall": 0.8153865032944745
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.8381338715553284,
+      "acc5": 0.9675456285476685,
+      "mean_per_class_recall": 0.8151627367117646
+    }
+  },
+  "zeroshot_classification_dtd": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.63947993516922,
+      "acc5": 0.8906619548797607,
+      "mean_per_class_recall": 0.6394799054373521
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.23049645125865936,
+      "acc5": 0.4834515452384949,
+      "mean_per_class_recall": 0.2304964539007093
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.24468085169792175,
+      "acc5": 0.4781323969364166,
+      "mean_per_class_recall": 0.24468085106382978
+    }
+  },
+  "zeroshot_classification_eurosat": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.515925943851471,
+      "acc5": 0.9351851940155029,
+      "mean_per_class_recall": 0.5150333333333335
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.2862963080406189,
+      "acc5": 0.845061719417572,
+      "mean_per_class_recall": 0.29833333333333334
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.29271605610847473,
+      "acc5": 0.890617311000824,
+      "mean_per_class_recall": 0.29362222222222223
+    }
+  },
+  "zeroshot_classification_flower": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.7957774996757507,
+      "acc5": 0.9033699035644531,
+      "mean_per_class_recall": 0.7878765225885022
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.5485180616378784,
+      "acc5": 0.7706049680709839,
+      "mean_per_class_recall": 0.5602218940963279
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.4961429238319397,
+      "acc5": 0.7324401140213013,
+      "mean_per_class_recall": 0.5028356009503112
+    }
+  },
+  "zeroshot_classification_food": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.9132673144340515,
+      "acc5": 0.9861056208610535,
+      "mean_per_class_recall": 0.9132673267326734
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.7721452116966248,
+      "acc5": 0.9544224143028259,
+      "mean_per_class_recall": 0.772145214521452
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.789207935333252,
+      "acc5": 0.95881187915802,
+      "mean_per_class_recall": 0.7892079207920792
+    }
+  },
+  "zeroshot_classification_imagenet": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.7758600115776062,
+      "acc5": 0.9447799921035767,
+      "mean_per_class_recall": 0.77586
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.5496399998664856,
+      "acc5": 0.8012599945068359,
+      "mean_per_class_recall": 0.5496400000000001
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.5644599795341492,
+      "acc5": 0.8049200177192688,
+      "mean_per_class_recall": 0.5644600000000001
+    }
+  },
+  "zeroshot_classification_pet": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.918506383895874,
+      "acc5": 0.9746524691581726,
+      "mean_per_class_recall": 0.9152283808976567
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.6862905621528625,
+      "acc5": 0.9351322054862976,
+      "mean_per_class_recall": 0.6842833964903764
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.6723902821540833,
+      "acc5": 0.9084219336509705,
+      "mean_per_class_recall": 0.6685846727667978
+    }
+  },
+  "zeroshot_classification_sun": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.7218639850616455,
+      "acc5": 0.9463475942611694,
+      "mean_per_class_recall": 0.7218639798488666
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.5130982398986816,
+      "acc5": 0.7961208820343018,
+      "mean_per_class_recall": 0.5130982367758186
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.5142065286636353,
+      "acc5": 0.7857934236526489,
+      "mean_per_class_recall": 0.5142065491183879
+    }
+  },
+  "zeroshot_classification_ucf": {
+    "CLIP ViT-bigG": {
+      "acc1": 0.7570710778236389,
+      "acc5": 0.9516257047653198,
+      "mean_per_class_recall": 0.7614382509441875
+    },
+    "cc3m-aux0.001-t100/cs-aligner-laion-best-epoch=0015": {
+      "acc1": 0.5884218811988831,
+      "acc5": 0.8403383493423462,
+      "mean_per_class_recall": 0.5857640328671017
+    },
+    "cc3m-aux0.001-t2/cs-aligner-laion-best-epoch=0016": {
+      "acc1": 0.6204071044921875,
+      "acc5": 0.8554057478904724,
+      "mean_per_class_recall": 0.6117431952417989
+    }
+  }
+}
