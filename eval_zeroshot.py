@@ -43,6 +43,8 @@ def parse_args():
     parser.add_argument("--batch_size", default=256, type=int)
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--seed", default=42, type=int, help="seed of the noise input of the prior")
+    parser.add_argument("--num_samples", default=1, type=int,
+                        help="noise samples of the prior per prompt; their normalised embeddings are averaged")
     return parser.parse_args()
 
 
@@ -79,13 +81,16 @@ def clip_text_features(model, prompts, device, batch_size):
 
 
 @torch.no_grad()
-def prior_text_features(model, prompts, device, batch_size, seed):
+def prior_text_features(model, prompts, device, batch_size, seed, num_samples=1):
     generator = torch.Generator(device).manual_seed(seed)  # the prior starts from noise: same seed, same classifier
     feats = []
     for i in range(0, len(prompts), batch_size):
-        with torch.autocast("cuda", dtype=torch.float16):
-            emb = model.pipe_prior(prompts[i:i + batch_size], generator=generator).image_embeds
-        feats.append(F.normalize(emb.float(), dim=-1).cpu())
+        emb = 0
+        for _ in range(num_samples):  # mean of the normalised embeddings of num_samples noise draws
+            with torch.autocast("cuda", dtype=torch.float16):
+                sample = model.pipe_prior(prompts[i:i + batch_size], generator=generator).image_embeds
+            emb = emb + F.normalize(sample.float(), dim=-1)
+        feats.append(F.normalize(emb, dim=-1).cpu())
     return torch.cat(feats)
 
 
@@ -134,7 +139,8 @@ def main():
         print(f"## loading {ckpt} as {run}")
         load_prior_checkpoint(model, ckpt, strict=True, map_location=device)
         for name, p in prompts.items():
-            classifiers[name][run] = prior_text_features(model, p, device, args.batch_size, args.seed)
+            classifiers[name][run] = prior_text_features(model, p, device, args.batch_size, args.seed,
+                                                                 args.num_samples)
 
     results = {}
     for name in args.datasets:

@@ -42,6 +42,8 @@ def parse_args():
     parser.add_argument("--batch_size", default=256, type=int)
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--seed", default=42, type=int, help="seed of the noise input of the prior")
+    parser.add_argument("--num_samples", default=1, type=int,
+                        help="noise samples of the prior per prompt; their normalised embeddings are averaged")
     return parser.parse_args()
 
 
@@ -98,7 +100,8 @@ def main():
     for run, ckpt in runs.items():
         print(f"## loading {ckpt} as {run}")
         load_prior_checkpoint(model, ckpt, strict=True, map_location=device)
-        texts[run] = prior_text_features(model, dataset.captions, device, args.batch_size, args.seed)
+        texts[run] = prior_text_features(model, dataset.captions, device, args.batch_size, args.seed,
+                                         args.num_samples)
 
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                         pin_memory=True)
